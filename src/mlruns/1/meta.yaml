@@ -1,0 +1,4 @@
+artifact_location: file:///home/logeshwaran/assignments/mle-training/src/mlruns/1
+experiment_id: '1'
+lifecycle_stage: active
+name: Housing_mle-training

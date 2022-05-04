@@ -2,20 +2,17 @@
     "python.linting.flake8Enabled": true,
     "python.linting.enabled": true,
     "python.linting.lintOnSave": true,
-
     "editor.formatOnSave": true,
-  "python.formatting.provider": "black",
+    "python.formatting.provider": "black",
     "python.formatting.blackArgs": [
-      "--line-length=119"
-  ],
-  "python.sortImports.args": [
-    "--profile=black",
-  ],
-  "[python]": {
-    "editor.codeActionsOnSave": {
-        "source.organizeImports": true
+        "--line-length=200"
+    ],
+    "python.sortImports.args": [
+        "--profile=black",
+    ],
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
     }
-  } 
-    
-
 }

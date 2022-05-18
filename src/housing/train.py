@@ -8,12 +8,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
+from logging import Logger
+from housing.logger import configure_logger
 
 remote_server_uri = "http://0.0.0.0:5000"  # set to your server URI
 mlflow.set_tracking_uri(remote_server_uri)
 exp_name = "Housing_mle-training"
 mlflow.set_experiment(exp_name)
-
+model_names = ["lin_model", "tree_model", "forest_model", "grid_search_model"]
 
 def get_path():
     path_parent = os.getcwd()
@@ -34,6 +36,9 @@ def parse_args():
     parser.add_argument(
         "--outputpath", help="path to store the output ", type=str, default="artifacts"
     )
+    parser.add_argument("--log-level", type=str, default="DEBUG")
+    parser.add_argument("--no-console-log", action="store_true")
+    parser.add_argument("--log-path", type=str, default=get_path()+"logs/logs.log")
     return parser.parse_args()
 
 
@@ -66,24 +71,14 @@ def train(housing_prepared, housing_labels):
     return lin_reg, tree_reg, forest_reg, grid_search
 
 
-def rem_index(data):
-    new_columns = data.columns.values
-    new_columns[0] = ""
-    data.columns = new_columns
-    data = data.set_index("")
-    return data
-
-
 def load_data(in_path):
-    prepared = pd.read_csv(in_path + "/train_X.csv", index_col=False)
-    prepared = rem_index(prepared)
-    lables = pd.read_csv(in_path + "/train_y.csv", index_col=False)
+    prepared = pd.read_csv(in_path + "/train_X.csv")
+    lables = pd.read_csv(in_path + "/train_y.csv")
     lables = lables.values.ravel()
     return prepared, lables
 
 
 def rem_artifacts(out_path):
-    model_names = ["lin_model", "tree_model", "forest_model", "grid_search_model"]
     for i in model_names:
         if os.path.exists(out_path + "/" + i):
             shutil.rmtree(out_path + "/" + i)
@@ -100,10 +95,20 @@ def mlflow_model(lin_reg, tree_reg, forest_reg, grid_search, out_path):
 if __name__ == "__main__":
 
     args = parse_args()
+    logger = configure_logger(
+        log_level=args.log_level,
+        log_file=args.log_path,
+        console=not args.no_console_log,
+    )
     path_parent = get_path()
     in_path = path_parent + args.inputpath
     out_path = path_parent + args.outputpath
     rem_artifacts(out_path)
     prepared, labels = load_data(in_path)
+    logger.debug("Loaded training data")
     lin_reg, tree_reg, forest_reg, grid_search = train(prepared, labels)
+    logger.debug("Training completed")
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
     mlflow_model(lin_reg, tree_reg, forest_reg, grid_search, out_path)
+    logger.debug(f"Models stored at {out_path}.")

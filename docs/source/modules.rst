@@ -1,7 +1,7 @@
-src
-===
+housing
+=======
 
 .. toctree::
    :maxdepth: 4
 
-   src
+   housing

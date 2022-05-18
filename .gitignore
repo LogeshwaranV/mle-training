@@ -8,3 +8,5 @@ mlruns/**
 .flake8
 .vscode/**
 *model/
+*.log
+docs/build/**

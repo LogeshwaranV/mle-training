@@ -1,56 +1,54 @@
+import unittest
+from housing import ingest_data as data
 import os
-from src import ingest_data as data
 import pandas as pd
 
-DOWNLOAD_ROOT = "https://raw.githubusercontent.com/ageron/handson-ml/master/"
-HOUSING_PATH = os.path.join("data/raw", "housing")
-HOUSING_URL = DOWNLOAD_ROOT + "datasets/housing/housing.tgz"
 
 args = data.parse_args()
 DOWNLOAD_ROOT = "https://raw.githubusercontent.com/ageron/handson-ml/master/"
 HOUSING_PATH = args.datapath
 HOUSING_URL = DOWNLOAD_ROOT + "datasets/housing/housing.tgz"
-
-
-def test_parse_args():
-
-    assert args.datapath == "data/raw/housing"
-
-
 rootpath = data.get_path()
 
+class Testutils(unittest.TestCase):
+    def test_parse_args(self):
 
-def test_fetch_data():
-
-    data.fetch_housing_data(HOUSING_URL, HOUSING_PATH)
-    assert os.path.isfile(rootpath+args.datapath+"/housing.tgz")
-    assert os.path.isfile(rootpath+args.datapath+"/housing.csv")
-
-
-def test_preprocess():
-
-    housing_df = pd.read_csv(rootpath+args.datapath+"/housing.csv")
-    train_X, train_y, test_set, = data.preprocess(housing_df)
-    assert len(train_X) == len(housing_df) * 0.8
-    assert len(test_set) == len(housing_df) * 0.2
-    assert "income_cat" not in train_X.columns
-    assert "income_cat" not in test_set.columns
-
-    assert not train_X.isna().sum().sum()
-    assert "ocean_proximity" not in train_X.columns
-    assert "ocean_proximity" in test_set.columns
-    assert "rooms_per_household" in train_X.columns
-    assert "rooms_per_household" not in test_set.columns
-    assert "population_per_household" in train_X.columns
-    assert "population_per_household" not in test_set.columns
-    assert "bedrooms_per_room" in train_X.columns
-    assert "bedrooms_per_room" not in test_set.columns
+        self.assertTrue( args.datapath == "data/raw/housing")
+        self.assertTrue (args.dataprocessed == "data/processed")
+        self.assertTrue (args.log_level == "DEBUG")
+        self.assertFalse(args.no_console_log)
+        self.assertTrue (args.log_path == "logs")
 
 
-test_parse_args()
+    def test_fetch_data(self):
+        data.fetch_housing_data(HOUSING_URL, HOUSING_PATH)
+        self.assertTrue(os.path.isfile(f"{rootpath}{args.datapath}/housing.tgz"))
+        self.assertTrue (os.path.isfile(f"{rootpath}{args.datapath}/housing.csv"))
 
 
-test_preprocess()
+    def test_split(self):
+        housing_df = pd.read_csv(f"{rootpath}{args.datapath}/housing.csv")
+        train_set, test_set = data.train_test(housing_df)
+        self.assertFalse (train_set.isna().sum().sum() == 0)
+        self.assertFalse (test_set.isna().sum().sum() == 0)
+        self.assertTrue (len(train_set) == len(housing_df) * 0.8)
+        self.assertTrue (len(test_set) == len(housing_df) * 0.2)
 
 
-test_preprocess()
+    def test_preprocess(self):
+        housing_df = pd.read_csv(f"{rootpath}{args.datapath}/housing.csv")
+        train_set, test_set = data.train_test(housing_df)
+        train_X,train_y = data.preprocess(train_set)
+        test_X, test_y= data.preprocess(test_set)
+        
+        self.assertTrue ("ocean_proximity" not in train_X.columns)
+        self.assertTrue ("ocean_proximity" not in test_X.columns)
+        self.assertTrue ("rooms_per_household" in train_X.columns)
+        self.assertTrue ("rooms_per_household" in test_X.columns)
+        self.assertTrue ("population_per_household" in train_X.columns)
+        self.assertTrue ("population_per_household" in test_X.columns)
+        self.assertTrue ("bedrooms_per_room" in train_X.columns)
+        self.assertTrue ("bedrooms_per_room" in test_X.columns)
+
+if __name__ == '__main__':
+    unittest.main()

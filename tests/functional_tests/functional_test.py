@@ -1,5 +1,5 @@
 import os
-
+import pytest
 
 def get_path():
     path_parent = os.getcwd()
@@ -15,7 +15,7 @@ path = get_path()
 def test_ingest():
     datapath = "dataset/raw/housing"
     os.system(
-        f"python src/ingest_data.py --datapath {datapath}"
+        f"python src/housing/ingest_data.py --datapath {datapath}"
     )
     print(f"{path}{datapath}/housing.csv")
     assert os.path.isfile(f"{path}{datapath}/housing.csv")
@@ -27,9 +27,8 @@ def test_train():
     models = "outputs/artifacts"
     dataset = "data/processed"
     model_names = ['lin_model', 'tree_model', 'forest_model', 'grid_search_model']
-    os.system(f"python src/train.py --inputpath {dataset} --outputpath {models}")
-    print(f"{path}{models}/{model_names[0]}/model.pkl")
-    assert os.path.isfile(f"{path}{models}{model_names[0]}")
-    assert os.path.isfile(f"{path}{models}{model_names[1]}/model.pkl")
-    assert os.path.isfile(f"{path}{models}{model_names[2]}/model.pkl")
-    assert os.path.isfile(f"{path}{models}{model_names[3]}/model.pkl")
+    os.system(f"python src/housing/train.py --inputpath {dataset} --outputpath {models}")
+    assert os.path.isfile(f"{path}{models}/{model_names[0]}/model.pkl")
+    assert os.path.isfile(f"{path}{models}/{model_names[1]}/model.pkl")
+    assert os.path.isfile(f"{path}{models}/{model_names[2]}/model.pkl")
+    assert os.path.isfile(f"{path}{models}/{model_names[3]}/model.pkl")

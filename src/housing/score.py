@@ -8,11 +8,17 @@ import numpy as np
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from logging import Logger
+from housing.logger import configure_logger
 
 remote_server_uri = "http://0.0.0.0:5000"  # set to your server URI
 mlflow.set_tracking_uri(remote_server_uri)
 exp_name = "Housing_mle-training"
 mlflow.set_experiment(exp_name)
+model_names = ['lin_model',
+                'tree_model',
+               'forest_model',
+               'grid_search_model']
 
 
 def get_path():
@@ -29,6 +35,9 @@ def parse_args():
                         type=str, default='data/processed')
     parser.add_argument("--modelpath", help="path to the model files ",
                         type=str, default='artifacts')
+    parser.add_argument("--log-level", type=str, default="DEBUG")
+    parser.add_argument("--no-console-log", action="store_true")
+    parser.add_argument("--log-path", type=str, default=get_path()+"logs/logs.log")
     return parser.parse_args()
 
 
@@ -36,47 +45,24 @@ exp_name = "Housing_mle-training"
 mlflow.set_experiment(exp_name)
 
 
-def scoring(strat_test_set, lin_reg, tree_reg, forest_reg, grid_search):
-    # housing_prepared,housing_labels,strat_test_set=preprocess(housing)
-    X_test = strat_test_set.drop("median_house_value", axis=1)
-    y_test = strat_test_set["median_house_value"].copy()
+def scoring(X_test,y_test, lin_reg, tree_reg, forest_reg, grid_search):
 
-    X_test_num = X_test.drop("ocean_proximity", axis=1)
-    imputer = SimpleImputer(strategy="median")
-    X_test_prepared = imputer.fit_transform(X_test_num)
-    X_test_prepared = pd.DataFrame(
-        X_test_prepared, columns=X_test_num.columns, index=X_test.index
-    )
-    X_test_prepared["rooms_per_household"] = (
-        X_test_prepared["total_rooms"] / X_test_prepared["households"]
-    )
-    X_test_prepared["bedrooms_per_room"] = (
-        X_test_prepared["total_bedrooms"] / X_test_prepared["total_rooms"]
-    )
-    X_test_prepared["population_per_household"] = (
-        X_test_prepared["population"] / X_test_prepared["households"]
-    )
-
-    X_test_cat = X_test[["ocean_proximity"]]
-    X_test_prepared = X_test_prepared.join(
-        pd.get_dummies(X_test_cat, drop_first=True))
-
-    lin_predictions = lin_reg.predict(X_test_prepared)
+    lin_predictions = lin_reg.predict(X_test)
     lin_mse = mean_squared_error(y_test, lin_predictions)
     lin_rmse = np.sqrt(lin_mse)
     lin_mae = mean_absolute_error(y_test, lin_predictions)
 
-    tree_predictions = tree_reg.predict(X_test_prepared)
+    tree_predictions = tree_reg.predict(X_test)
     tree_mse = mean_squared_error(y_test, tree_predictions)
     tree_rmse = np.sqrt(tree_mse)
     tree_mae = mean_absolute_error(y_test, tree_predictions)
 
-    forest_predictions = forest_reg.predict(X_test_prepared)
+    forest_predictions = forest_reg.predict(X_test)
     forest_mse = mean_squared_error(y_test, forest_predictions)
     forest_rmse = np.sqrt(forest_mse)
     forest_mae = mean_absolute_error(y_test, forest_predictions)
 
-    grid_search_predictions = grid_search.predict(X_test_prepared)
+    grid_search_predictions = grid_search.predict(X_test)
     grid_search_mse = mean_squared_error(y_test, grid_search_predictions)
     grid_search_rmse = np.sqrt(grid_search_mse)
     grid_search_mae = mean_absolute_error(y_test, grid_search_predictions)
@@ -88,20 +74,13 @@ def scoring(strat_test_set, lin_reg, tree_reg, forest_reg, grid_search):
 
     return lin_scores, tree_scores, forest_scores, grid_search_scores
 
-
-def rem_index(data):
-    new_columns = data.columns.values
-    new_columns[0] = ''
-    data.columns = new_columns
-    data = data.set_index('')
-    return data
-
+def load_data(in_path):
+    prepared = pd.read_csv(in_path + "/test_X.csv")
+    lables = pd.read_csv(in_path + "/test_y.csv")
+    lables = lables.values.ravel()
+    return prepared, lables
 
 def load_models(model_path):
-    model_names = ['lin_model',
-                   'tree_model',
-                   'forest_model',
-                   'grid_search_model']
     models = []
     for i in model_names:
         with open(model_path+'/'+i+'/model.pkl', 'rb') as f:
@@ -109,14 +88,10 @@ def load_models(model_path):
     return models
 
 
-def mlflow_score(models):
+def mlflow_score(models,X_test,y_test):
     with mlflow.start_run(run_name='SCORE'):
-        testset = pd.read_csv(data_path+'/train_set.csv')
-        testset = rem_index(testset)
-
         lin_scores, tree_scores, forest_scores, grid_search_scores = scoring(
-            testset, models[0], models[1], models[2], models[3])
-        print(lin_scores, tree_scores, forest_scores, grid_search_scores)
+            X_test,y_test, models[0], models[1], models[2], models[3])
         mlflow.log_metrics({'lin_mae': lin_scores[0],
                             'tree_mae': tree_scores[0],
                             'forest_mae': forest_scores[0],
@@ -129,13 +104,25 @@ def mlflow_score(models):
                             'tree_rmse': tree_scores[2],
                             'forest_rmse': forest_scores[2],
                             'grid_search_rmse': grid_search_scores[2]})
+    return [lin_scores, tree_scores, forest_scores, grid_search_scores]
 
 
 if __name__ == "__main__":
 
     args = parse_args()
+    logger = configure_logger(
+        log_level=args.log_level,
+        log_file=args.log_path,
+        console=not args.no_console_log,
+    )
     path_parent = get_path()
-    data_path = path_parent+'/'+args.datapath
-    model_path = path_parent+'/'+args.modelpath
+    data_path = path_parent+args.datapath
+    model_path = path_parent+args.modelpath
+    X_test,y_test=load_data(data_path)
+    logger.debug("Loaded test data")
     models = load_models(model_path)
-    mlflow_score(models)
+    logger.debug("Loaded Models")
+    scores=[]
+    scores=mlflow_score(models,X_test,y_test)
+    for i in range(len(models)):
+        logger.debug(f"{model_names[i]}={scores[i]}")

@@ -17,7 +17,7 @@ class Testutils(unittest.TestCase):
         self.assertTrue (args.dataprocessed == "data/processed")
         self.assertTrue (args.log_level == "DEBUG")
         self.assertFalse(args.no_console_log)
-        self.assertTrue (args.log_path == "logs")
+        self.assertTrue (args.log_path == rootpath+"logs/logs.log")
 
 
     def test_fetch_data(self):

@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
 
-    name="mle-housing_logeshwaran",
+    name="housing_logeshwaran",
 
     version="v0.3",
 

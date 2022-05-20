@@ -2,11 +2,12 @@
 *.pyc
 *.tgz
 build/**
-*.egg-info/**
+*.egg-info/
 dist/**
 mlruns/**
 .flake8
-.vscode/**
 *model/
 *.log
-docs/build/**
+docs/build/
+.vscode/**
+artifacts/models/

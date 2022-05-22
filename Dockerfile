@@ -1,23 +1,26 @@
 FROM continuumio/miniconda3
 
+RUN git clone https://github.com/LogeshwaranV/mle-training.git
 
 COPY deploy/conda/linux_cpu_py39.yml env.yml
 
 RUN conda env create -n housing -f env.yml
 
-RUN git clone https://github.com/LogeshwaranV/mle-training.git
-
 RUN cd mle-training \
     && conda run -n housing python3 setup.py install\
     && cd src/housing\
-    && conda run -n housing python3 ingest_data.py
-    
-RUN cd mle-training/src/housing\
-    &&conda run -n housing python3 train.py \
+    && conda run -n housing python3 ingest_data.py\
+    && conda run -n housing python3 train.py \
     && conda run -n housing python3 score.py
+    
+RUN cd mle-training/tests/unit_tests\
+    && conda run -n housing python3 ingest_data_test.py\
+    && conda run -n housing python3 train_test.py \
+    && conda run -n housing python3 score_test.py
 
-CMD ["/bin/bash"] 
+RUN cd mle-training\
+    && conda run -n housing pytest tests/functional_tests
+    
 
-COPY entrypoint.sh .
-ENTRYPOINT [ "./entrypoint.sh" ]
+
 
